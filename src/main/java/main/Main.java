@@ -127,7 +127,7 @@ public class Main {
         
         utilisateursData.show();
 
-        // Intégrer les informations des utilisateurs avec les seuils des régimes alimentaires
+        // Intégration des informations des utilisateurs avec les seuils des régimes alimentaires
 
         Dataset<Row> menuPersonnalise = utilisateursData
         	    .join(regimesData, utilisateursData.col("regime_alimentaire").equalTo(regimesData.col("regime")))
@@ -135,6 +135,45 @@ public class Main {
         
         menuPersonnalise.show();  
 
+        //Générer aléatoirement un menu sur une semaine
+        
+        Dataset<Row> menuHebdomadaire = genererMenuHebdomadaire(openFoodFactsData, menuPersonnalise);
+        
+        //Affichage de menu pour la semaine
+        System.out.println("Voici le menu de la semaine :");
+        menuHebdomadaire.show();
+
 	}
+    // Fonction pour générer aléatoirement un menu hebdomadaire équilibré
+	
+    private static Dataset<Row> genererMenuHebdomadaire(Dataset<Row> openFoodFactsData, Dataset<Row> menuPersonnalise) {
+    	// Initialisation e DataFrame pour le menu hebdomadaire
+    	 Dataset<Row> menuHebdomadaire = openFoodFactsData.filter(col("energy_100g").isNotNull())
+    	            .filter(col("fat_100g").isNotNull())
+    	            .filter(col("carbohydrates_100g").isNotNull())
+                    .filter(col("proteins_100g").isNotNull())
+    	            .filter(col("salt_100g").isNotNull());
+    	 
+            // Répéter pour chaque jour de la semaine
+            for (int jour = 1; jour <= 7; jour++) {
+                // Sélectionner aléatoirement des produits pour chaque jour
+                Dataset<Row> menuJour = menuHebdomadaire.sample(false, 0.1).limit(7).withColumn("jour", lit(jour));
+
+                //On affiche le menu de chaque jour: 
+
+                System.out.println("Voici le menu du jour :");
+                menuJour.show();
+                // On ajoute le menu du jour au menu hebdomadaire
+                
+                if (jour == 1) {
+                    menuHebdomadaire = menuJour;
+                } else {
+                    menuHebdomadaire = menuHebdomadaire.union(menuJour);
+                }
+            }
+
+            return menuHebdomadaire;
+            
+    }
 
 }
