@@ -4,6 +4,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
+import static org.apache.spark.sql.functions.*;
 
 public class Main {
 	
@@ -11,18 +12,18 @@ public class Main {
   
 	public static void main(String[] args) {
 
-        // Création de la session Spark
+        // Crï¿½ation de la session Spark
         SparkSession sparkSession = SparkSession.builder().appName("IntegrationDonnees").master("local").getOrCreate();
         
-        // Chargement des données Openfoodfacts depuis le lien CSV
+        // Chargement des donnï¿½es Openfoodfacts depuis le lien CSV
         Dataset<Row> openFoodFactsData = sparkSession.read()
         		.format("csv")
                 .option("header", "true")
-                .option("delimiter", "\t")  // Utilisation de la tabulation comme séparateur
+                .option("delimiter", "\t")  // Utilisation de la tabulation comme sï¿½parateur
                 .option("encoding", "UTF-8") // Utilisation de l'encodage UTF-8
-                .load("C:/Users/Alyssa/Desktop/en.openfoodfacts.org.products.csv"); //Url du csv sur mon ordinateur, à changer pour que ça fonctionne
+                .load("C:/Users/Alyssa/Desktop/en.openfoodfacts.org.products.csv"); //Url du csv sur mon ordinateur, ï¿½ changer pour que ï¿½a fonctionne
         
-        // Informations du début (root)
+        // Informations du dï¿½but (root)
         openFoodFactsData.printSchema();
         // Nombre de lignes
         long rowCount = openFoodFactsData.count();
@@ -30,7 +31,7 @@ public class Main {
         // Nombre de colonnes
         int columnCount = openFoodFactsData.columns().length;
 
-        // Afficher le résultat (cette étape permet d'avoir une vue d'ensemble du volume des données)
+        // Afficher le rï¿½sultat (cette ï¿½tape permet d'avoir une vue d'ensemble du volume des donnï¿½es)
         System.out.println("Le dataset compte " + rowCount + " lignes et " + columnCount + " variables.");
         
         //On fait un tableau pour les colonnes qu'on veut garder
@@ -48,24 +49,24 @@ public class Main {
                 .filter("salt_100g is not null");
         
         //On veut enlever les valeurs qui sont dites "abberantes"
-        //Le nutriscore n'étant pas une valeur très importantes, le "unknown" n'est pas dérangeant
+        //Le nutriscore n'ï¿½tant pas une valeur trï¿½s importantes, le "unknown" n'est pas dï¿½rangeant
         // Convertir les colonnes pertinentes en type double pour effectuer des calculs
         for (String column : columnsToKeep) {
-            // Vérifier si la colonne est une chaîne de caractères (string)
+            // Vï¿½rifier si la colonne est une chaï¿½ne de caractï¿½res (string)
             if (openFoodFactsData.schema().apply(column).dataType().simpleString().equals("string")) {
-                // Laisser la colonne inchangée
+                // Laisser la colonne inchangï¿½e
                 continue;
             }
             // Convertir la colonne en double
             openFoodFactsData = openFoodFactsData.withColumn(column, functions.col(column).cast("double"));
         }
         
-        // Définir les bornes acceptables pour chaque colonne
+        // Dï¿½finir les bornes acceptables pour chaque colonne
         double[] minValues = {1,0, 0, 0, 0, 0};  // bornes minimales
         double[] maxValues = {900, 100, 100, 100,100,100};  // bornes maximales
         
-     // Filtrer les lignes contenant des valeurs aberrantes (ici pour énergie, lipides, protéines, sucre et sel)
-        for (int i = 4; i < columnsToKeep.length; i++) { // Commencer à partir de "energy_100g"
+     // Filtrer les lignes contenant des valeurs aberrantes (ici pour ï¿½nergie, lipides, protï¿½ines, sucre et sel)
+        for (int i = 4; i < columnsToKeep.length; i++) { // Commencer ï¿½ partir de "energy_100g"
             String column = columnsToKeep[i];
             double minValue = minValues[i-4]; // Indice relatif aux bornes dans le tableau minValues
             double maxValue = maxValues[i-4]; // Indice relatif aux bornes dans le tableau maxValues
@@ -77,33 +78,70 @@ public class Main {
         // Nombre de colonnes
         int columnCountAfter = openFoodFactsData.columns().length;
 
-        // Afficher le résultat (cette étape permet d'avoir une vue d'ensemble du volume des données après le netoyage)
-        System.out.println("Après le netoyage, le dataset compte " + rowCountAfter + " lignes et " + columnCountAfter + " variables.");
+        // Afficher le rï¿½sultat (cette ï¿½tape permet d'avoir une vue d'ensemble du volume des donnï¿½es aprï¿½s le netoyage)
+        System.out.println("Aprï¿½s le netoyage, le dataset compte " + rowCountAfter + " lignes et " + columnCountAfter + " variables.");
         
-        //Afficher les 20 premières lignes du tableau
+        //Afficher les 20 premiï¿½res lignes du tableau
         openFoodFactsData.show();
 
         ////////////////////////////////////////////////////////////////////////
         
-        // Chargement des données des régimes depuis le lien CSV
+        // Chargement des donnï¿½es des rï¿½gimes depuis le lien CSV
         Dataset<Row> regimesData = sparkSession.read()
         		.format("csv")
                 .option("header", "true")
-                .option("delimiter", ",")  // Utilisation de la tabulation comme séparateur
+                .option("delimiter", ",")  // Utilisation de la tabulation comme sï¿½parateur
                 .option("encoding", "UTF-8") // Utilisation de l'encodage UTF-8
-                .load("C:/Users/Alyssa/Desktop/regimes_nutritionnels.csv"); //Url du csv sur mon ordinateur, à changer pour que ça fonctionne
+                .load("C:/Users/Alyssa/Desktop/regimes_nutritionnels.csv"); //Url du csv sur mon ordinateur, ï¿½ changer pour que ï¿½a fonctionne
         
-        regimesData.show();
+            // Supprimer les lignes vides
+            regimesData = regimesData.na().drop();
+
+                 // Supprimer les lignes avec des valeurs manquantes ou mal formatÃ©es
+                    regimesData = regimesData
+                    .filter(col("regime_alimentaire").isNotNull())
+                    .filter(col("max_glucides_g").isNotNull())
+                    .filter(col("max_proteines_g").isNotNull())
+                    .filter(col("max_lipides_g").isNotNull())
+                    .filter(col("max_calories").isNotNull());
+            
+                     // Corriger le format des valeurs numÃ©riques
+                    regimesData = regimesData
+                    .withColumn("max_calories", regexp_replace(col("max_calories"), ";", "").cast("int"))
+                    .withColumn("max_glucides_g", regexp_replace(col("max_glucides_g"), ";", "").cast("int"))
+                    .withColumn("max_proteines_g", regexp_replace(col("max_proteines_g"), ";", "").cast("int"))
+                    .withColumn("max_lipides_g", regexp_replace(col("max_lipides_g"), ";", "").cast("int"));
+    
+            regimesData.show();
         
-        // Chargement des données des régimes depuis le lien CSV
+        // Chargement des donnï¿½es des rï¿½gimes depuis le lien CSV
         Dataset<Row> utilisateursData = sparkSession.read()
         		.format("csv")
                 .option("header", "true")
-                .option("delimiter", ",")  // Utilisation de la tabulation comme séparateur
+                .option("delimiter", ",")  // Utilisation de la tabulation comme sï¿½parateur
                 .option("encoding", "UTF-8") // Utilisation de l'encodage UTF-8
-                .load("C:/Users/Alyssa/Desktop/utilisateurs_regimes.csv"); //Url du csv sur mon ordinateur, à changer pour que ça fonctionne
+                .load("C:/Users/Alyssa/Desktop/utilisateurs_regimes.csv"); //Url du csv sur mon ordinateur, ï¿½ changer pour que ï¿½a fonctionne
+
+                 // Supprimer les lignes vides
+        utilisateursData = utilisateursData.na().drop();
         
         utilisateursData.show();
+
+        // IntÃ©grer les informations des utilisateurs avec les seuils des rÃ©gimes alimentaires
+        Dataset<Row> menuPersonnalise = utilisateursData
+        .join(regimesData, utilisateursData.col("regime_alimentaire").equalTo(regimesData.col("regime_alimentaire")))
+        .select("utilisateur_id", "regime_alimentaire", "max_glucides_g", "max_proteines_g", "max_lipides_g", "max_calories;");
+
+    // Appliquer les filtres en fonction des seuils du rÃ©gime alimentaire de l'utilisateur
+        Dataset<Row> menuFiltre = openFoodFactsData
+            .join(menuPersonnalise, openFoodFactsData.col("regime_alimentaire").equalTo(menuPersonnalise.col("regime_alimentaire")))
+            .filter(openFoodFactsData.col("energy_100g").leq(menuPersonnalise.col("max_calories;")))
+            .filter(openFoodFactsData.col("fat_100g").leq(menuPersonnalise.col("max_lipides_g")))
+            .filter(openFoodFactsData.col("carbohydrates_100g").leq(menuPersonnalise.col("max_glucides_g")))
+            .filter(openFoodFactsData.col("proteins_100g").leq(menuPersonnalise.col("max_proteines_g")));
+
+    // Afficher les 20 premiÃ¨res lignes du menu filtrÃ©
+    menuFiltre.show();
         
         
 
