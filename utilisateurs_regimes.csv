@@ -1,0 +1,17 @@
+utilisateur_id,age,sexe,poids,regime_alimentaire
+1,30,M,70,Vegetarien
+2,25,F,65,Cetogene
+3,40,M,80,Vegan
+4,35,F,60,Mediterraneen
+5,28,M,75,DASH
+6,45,F,68,FODMAP
+7,32,M,85,Low_Carb
+8,27,F,62,Paleo
+9,38,M,78,Weight_Watchers
+10,29,F,70,Zone
+11,33,M,72,Low_FODMAP
+12,31,F,68,Mediterraneen_Modifie
+13,29,M,80,Dash_Moderne
+14,36,F,65,Proteine_Pure
+15,30,M,75,Sans_gluten
+16,32,M,60,Alcalin
