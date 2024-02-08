@@ -7,7 +7,7 @@ import org.apache.spark.sql.functions;
 import static org.apache.spark.sql.functions.*;
 
 public class Main {
-	
+	private static SparkSession sparkSession;
 	
   
 	public static void main(String[] args) {
@@ -136,7 +136,6 @@ public class Main {
         menuPersonnalise.show();  
 
         //Générer aléatoirement un menu sur une semaine
-        
         Dataset<Row> menuHebdomadaire = genererMenuHebdomadaire(openFoodFactsData, menuPersonnalise);
         
         //Affichage de menu pour la semaine
@@ -171,9 +170,33 @@ public class Main {
                     menuHebdomadaire = menuHebdomadaire.union(menuJour);
                 }
             }
-
-            return menuHebdomadaire;
+            //stocker le menu dans le DWH : //besoin d'installer HADOOP pour cette partie
+            String menuHebdomadairePath = "C:/epsi/data/menu_hebdomadaire1";
+            menuHebdomadaire.write()
+                    .format("csv")
+                    .option("header", "true")
+                    .option("delimiter", ",")
+                    .mode("overwrite")
+                    .save(menuHebdomadairePath);
             
-    }
+            // Création d'une table dans le DWH pour stocker le menu hebdomadaire
+            menuHebdomadaire.createOrReplaceTempView("table_menu_hebdomadaire");
+            
+            // Création d'une table pour lier le menu hebdomadaire à l'utilisateur final
+            String sqlCreateLinkTable = "CREATE TABLE IF NOT EXISTS table_lien_utilisateur_menu (" +
+                    "utilisateur_id INT, " +
+                    "menu_id INT, " +
+                    "jour INT)";
+            sparkSession.sql(sqlCreateLinkTable);
+            
+             // On ajoute les informations de liaison dans la table du DWH
+            String sqlInsertLinkInfo = "INSERT INTO table_lien_utilisateur_menu VALUES (utilisateur_id, menu_id, jour)";
+            sparkSession.sql(sqlInsertLinkInfo);
 
+            // Affichage du menu hebdomadaire (c'est le seul résultat observable par l'utilisateur final)
+            System.out.println("Voici le menu de la semaine :");
+            menuHebdomadaire.show();
+
+        return menuHebdomadaire;
+    }
 }
