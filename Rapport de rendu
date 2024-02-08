@@ -1,5 +1,8 @@
 Rapport de rendu
 
+Ce rapport présente en détail les différentes étapes entreprises pour répondre à la problématique métier.
+Le projet utilise Apache Spark en Java sur l'environnement de développement Eclipse.
+
 1) Récupération des données
   Pour récupérer les données OpenFoodFacts, nous avons exploité la source de données accessible à l'adresse https://fr.openfoodfacts.org/data. 
   À partir de cette source, nous avons téléchargé le fichier CSV contenant les informations sur les produits alimentaires. 
