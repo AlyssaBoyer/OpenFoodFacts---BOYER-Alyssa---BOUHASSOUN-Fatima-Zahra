@@ -1,1 +1,29 @@
-Ecrire le rapport ici....
+Rapport de rendu
+
+1) Récupération des données
+  Pour récupérer les données OpenFoodFacts, nous avons exploité la source de données accessible à l'adresse https://fr.openfoodfacts.org/data. 
+  À partir de cette source, nous avons téléchargé le fichier CSV contenant les informations sur les produits alimentaires. 
+  Nous avons ensuite utilisé Apache Spark pour charger et traiter ces données dans notre environnement de développement Eclipse.
+  De plus, nous avons affiché le root du fichier ainsi que le nombre de lignes et de colonnes pour avoir une idée du volume de données
+
+
+2) Nettoyage des données
+  a) Selectionner les colonnes (variables) utiles
+   Nous avions commencé à traité le nettoyage des données en supprimant toutes les lignes qui comportent des valeurs qui sont NULL.
+   Cependant, nous nous sommes rendu compte que toutes les lignes du fichiers contenaient des valeurs NULL. 
+   On obtenait alors un tableau vide.
+   Nous devions trouver une autre solution.
+   De ce fait, nous avons procédé à la sélection des colonnes pertinentes.
+   Nous avons identifié et conservé uniquement les colonnes jugées utiles pour répondre aux besoin. 
+   Ces colonnes incluent notamment le code du produit, le nom du produit, le pays d'origine, le grade nutriscore et les informations nutritionnelles telles que l'énergie, les lipides, les glucides, les protéines et le sel.
+ 
+  b) Suppression des données manquantes ou incomplètes
+   Nous avons utilisé des transformations Spark pour filtrer les lignes du DataFrame correspondant aux produits alimentaires pour lesquels des informations essentielles étaient manquantes ou incomplètes.
+   Cela inclut les produits sans nom, ou sans données nutritionnelles significatives.
+   Nous avons décidé de garder la valeur "unknown" pour le nutriscore car nous avons déterminé que cette valeur n'est pas necessaire mais apporte juste un plus si elle est renseignée.
+
+  c) Filtrage des valeurs aberrantes
+   En exploitant les capacités de traitement distribué d'Apache Spark, nous avons identifié et filtré les valeurs aberrantes dans les données, en particulier pour les composantes nutritionnelles telles que les lipides, les glucides, les protéines, etc. 
+   Les valeurs extrêmes ou non plausibles ont été éliminées.
+
+3) Création des fichiers CSV utilisateurs et régimes
