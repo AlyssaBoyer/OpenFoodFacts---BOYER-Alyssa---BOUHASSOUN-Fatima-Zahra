@@ -11,7 +11,7 @@ Le projet utilise Apache Spark en Java sur l'environnement de développement Ecl
 
 
 2) Nettoyage des données
-  a) Selectionner les colonnes (variables) utiles
+2.1 Selectionner les colonnes (variables) utiles
    Nous avions commencé à traité le nettoyage des données en supprimant toutes les lignes qui comportent des valeurs qui sont NULL.
    Cependant, nous nous sommes rendu compte que toutes les lignes du fichiers contenaient des valeurs NULL. 
    On obtenait alors un tableau vide.
@@ -20,13 +20,85 @@ Le projet utilise Apache Spark en Java sur l'environnement de développement Ecl
    Nous avons identifié et conservé uniquement les colonnes jugées utiles pour répondre aux besoin. 
    Ces colonnes incluent notamment le code du produit, le nom du produit, le pays d'origine, le grade nutriscore et les informations nutritionnelles telles que l'énergie, les lipides, les glucides, les protéines et le sel.
  
-  b) Suppression des données manquantes ou incomplètes
+2.2 Suppression des données manquantes ou incomplètes
    Nous avons utilisé des transformations Spark pour filtrer les lignes du DataFrame correspondant aux produits alimentaires pour lesquels des informations essentielles étaient manquantes ou incomplètes.
    Cela inclut les produits sans nom, ou sans données nutritionnelles significatives.
    Nous avons décidé de garder la valeur "unknown" pour le nutriscore car nous avons déterminé que cette valeur n'est pas necessaire mais apporte juste un plus si elle est renseignée.
 
-  c) Filtrage des valeurs aberrantes
+2.3 Filtrage des valeurs aberrantes
    En exploitant les capacités de traitement distribué d'Apache Spark, nous avons identifié et filtré les valeurs aberrantes dans les données, en particulier pour les composantes nutritionnelles telles que les lipides, les glucides, les protéines, etc. 
    Les valeurs extrêmes ou non plausibles ont été éliminées.
 
 3) Création des fichiers CSV utilisateurs et régimes
+Nous avons créé deux fichiers : 
+
+1. regimes_nutritionnels: ce fichier représente une table de référence pour différents régimes alimentaires avec des seuils recommandés pour certaines valeurs nutritionnelles. Chaque ligne correspond à un régime spécifique avec des valeurs maximales recommandées pour les nutriments tels que les glucides, les protéines, les lipides et les calories.
+
+ 
+
+ce fichier compose les colonnes suivantes: 
+
+régime: Cette colonne représente le nom du régime alimentaire. Chaque ligne correspond à un régime spécifique, par exemple, "FODMAP", "Mediterraneen", "Paleo", etc.
+
+max_glucides_g: Cette colonne indique la quantité maximale recommandée de glucides (en grammes) par jour pour une personne suivant ce régime alimentaire.
+
+max_proteines_g: Cette colonne indique la quantité maximale recommandée de protéines (en grammes) par jour pour une personne suivant ce régime alimentaire.
+
+max_lipides_g: Cette colonne indique la quantité maximale recommandée de lipides (en grammes) par jour pour une personne suivant ce régime alimentaire.
+
+max_calories: Cette colonne indique la quantité maximale recommandée de calories par jour pour une personne suivant ce régime alimentaire.
+
+Ce fichier est utilisé dans notre application Spark pour définir les critères de seuils lors de la génération d'un menu alimentaire personnalisé en fonction du régime alimentaire d'un utilisateur. Les colonnes de ce fichier sont sélectionnées et utilisées lors de la jointure avec les données des utilisateurs pour créer un menu personnalisé respectant les recommandations nutritionnelles spécifiques à chaque régime.
+
+2. utilisateurs_regimes: ce fichier représente une table d'utilisateurs avec des informations telles que l'identifiant utilisateur, l'âge, le sexe, le poids et le régime alimentaire suivi par chaque utilisateur. Voici une explication des colonnes :
+
+ 
+
+utilisateur_id: Cette colonne représente un identifiant unique pour chaque utilisateur. Chaque ligne a un identifiant utilisateur différent.
+
+age: Cette colonne indique l'âge de l'utilisateur.
+
+sexe: Cette colonne représente le sexe de l'utilisateur, généralement "M" pour masculin et "F" pour féminin.
+
+poids: Cette colonne indique le poids de l'utilisateur.
+
+regime_alimentaire: Cette colonne indique le régime alimentaire suivi par l'utilisateur. Les valeurs peuvent être, par exemple, "Vegetarien", "Cetogene", "Vegan", etc.
+
+Ces informations sur les utilisateurs sont utilisées dans notre application Spark pour personnaliser les menus alimentaires en fonction des préférences et des besoins nutritionnels de chaque utilisateur. Lorsque nous génerons le menu hebdomadaire, nous pouvons utiliser ces informations pour appliquer des filtres spécifiques basés sur le régime alimentaire de chaque utilisateur, en veillant à respecter les seuils recommandés pour les nutriments spécifiés dans le fichier de régimes alimentaires.
+
+4) Intégration des informations des utilisateurs avec les seuils des régimes alimentaires
+
+4.1 Intégration des informations des utilisateurs avec les seuils des régimes alimentaires
+
+Nous avons commencé par le chargement les données des utilisateurs et des régimes alimentaires à partir des fichiers CSV.
+
+4.2 Nettoyage des données :
+
+Les opérations de nettoyage sont effectuées pour éliminer les éventuelles valeurs nulles ou mal formatées. Cela garantit la qualité des données avant leur utilisation dans le processus de personnalisation.
+
+4.3 Jointure entre utilisateurs et régimes alimentaires :
+
+Une étape clé consiste à combiner les informations des utilisateurs avec les seuils des régimes alimentaires. La jointure est effectuée en fonction du régime alimentaire déclaré par l'utilisateur, créant ainsi un DataFrame consolidé contenant des détails tels que l'identifiant de l'utilisateur, le régime alimentaire choisi et les seuils associés.
+
+
+5) Génération aléatoire d'un menu hebdomadaire et stockage dans le DWH
+
+5.1 Génération du menu hebdomadaire personnalisé :
+
+La génération du menu hebdomadaire s'appuie sur les informations combinées pour créer des menus adaptés à chaque utilisateur. Des filtres spécifiques sont appliqués en fonction des seuils nutritionnels définis par le régime alimentaire de l'utilisateur.
+La fonction genererMenuHebdomadaire est responsable de la création de ce menu personnalisé. Elle prend en compte les informations nutritionnelles des produits alimentaires, ainsi que les seuils spécifiques de l'utilisateur pour chaque jour de la semaine.
+5.2 Liaison du menu hebdomadaire à l'utilisateur :
+
+Pour assurer la traçabilité et la personnalisation, le menu hebdomadaire est ensuite lié à l'utilisateur en fonction de l'identifiant de l'utilisateur.
+La jointure entre le menu hebdomadaire et les informations des utilisateurs permet de sélectionner les colonnes pertinentes à afficher et à stocker dans le Data Warehouse.
+
+5.3 Stockage du menu hebdomadaire dans le Data Warehouse :
+
+Enfin, pour garantir la persistance des données générées, le menu hebdomadaire est stocké dans le Data Warehouse. Dans notre cas  le stockage est simulé par l'écriture du DataFrame dans un fichier CSV Pour l’utilisateur finale.
+
+
+Ce processus complet garantit une expérience utilisateur personnalisée, où chaque individu bénéficie d'un menu hebdomadaire équilibré en fonction de ses préférences alimentaires et des objectifs nutritionnels liés à son régime alimentaire spécifique.
+
+
+
+
