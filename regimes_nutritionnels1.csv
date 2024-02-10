@@ -1,4 +1,4 @@
-regime_alimentaire,max_glucides_g,max_proteines_g,max_lipides_g,max_calories
+regime,max_glucides_g,max_proteines_g,max_lipides_g,max_calories
 FODMAP,50,30,20,200
 Mediterraneen,50,30,20,201
 Paleo,40,25,35,1800
