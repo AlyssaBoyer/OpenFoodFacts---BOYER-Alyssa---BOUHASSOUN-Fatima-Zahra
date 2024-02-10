@@ -7,7 +7,7 @@ import org.apache.spark.sql.functions;
 import static org.apache.spark.sql.functions.*;
 
 public class Main {
-	
+	private static SparkSession sparkSession;
 	
   
 	public static void main(String[] args) {
@@ -127,24 +127,76 @@ public class Main {
         
         utilisateursData.show();
 
-        // Intégrer les informations des utilisateurs avec les seuils des régimes alimentaires
+        // Intégration des informations des utilisateurs avec les seuils des régimes alimentaires
+
         Dataset<Row> menuPersonnalise = utilisateursData
-        .join(regimesData, utilisateursData.col("regime_alimentaire").equalTo(regimesData.col("regime_alimentaire")))
-        .select("utilisateur_id", "regime_alimentaire", "max_glucides_g", "max_proteines_g", "max_lipides_g", "max_calories;");
-
-    // Appliquer les filtres en fonction des seuils du régime alimentaire de l'utilisateur
-        Dataset<Row> menuFiltre = openFoodFactsData
-            .join(menuPersonnalise, openFoodFactsData.col("regime_alimentaire").equalTo(menuPersonnalise.col("regime_alimentaire")))
-            .filter(openFoodFactsData.col("energy_100g").leq(menuPersonnalise.col("max_calories;")))
-            .filter(openFoodFactsData.col("fat_100g").leq(menuPersonnalise.col("max_lipides_g")))
-            .filter(openFoodFactsData.col("carbohydrates_100g").leq(menuPersonnalise.col("max_glucides_g")))
-            .filter(openFoodFactsData.col("proteins_100g").leq(menuPersonnalise.col("max_proteines_g")));
-
-    // Afficher les 20 premières lignes du menu filtré
-    menuFiltre.show();
+        	    .join(regimesData, utilisateursData.col("regime_alimentaire").equalTo(regimesData.col("regime")))
+        	    .select("utilisateur_id", "regime_alimentaire", "max_glucides_g", "max_proteines_g", "max_lipides_g", "max_calories");
         
+        menuPersonnalise.show();  
+
+        //Générer aléatoirement un menu sur une semaine
+        Dataset<Row> menuHebdomadaire = genererMenuHebdomadaire(openFoodFactsData, menuPersonnalise);
         
+        //Affichage de menu pour la semaine
+        System.out.println("Voici le menu de la semaine :");
+        menuHebdomadaire.show();
 
 	}
+    // Fonction pour générer aléatoirement un menu hebdomadaire équilibré
+	
+    private static Dataset<Row> genererMenuHebdomadaire(Dataset<Row> openFoodFactsData, Dataset<Row> menuPersonnalise) {
+    	// Initialisation e DataFrame pour le menu hebdomadaire
+    	 Dataset<Row> menuHebdomadaire = openFoodFactsData.filter(col("energy_100g").isNotNull())
+    	            .filter(col("fat_100g").isNotNull())
+    	            .filter(col("carbohydrates_100g").isNotNull())
+                    .filter(col("proteins_100g").isNotNull())
+    	            .filter(col("salt_100g").isNotNull());
+    	 
+            // Répéter pour chaque jour de la semaine
+            for (int jour = 1; jour <= 7; jour++) {
+                // Sélectionner aléatoirement des produits pour chaque jour
+                Dataset<Row> menuJour = menuHebdomadaire.sample(false, 0.1).limit(7).withColumn("jour", lit(jour));
 
+                //On affiche le menu de chaque jour: 
+
+                System.out.println("Voici le menu du jour :");
+                menuJour.show();
+                // On ajoute le menu du jour au menu hebdomadaire
+                
+                if (jour == 1) {
+                    menuHebdomadaire = menuJour;
+                } else {
+                    menuHebdomadaire = menuHebdomadaire.union(menuJour);
+                }
+            }
+            //stocker le menu dans le DWH : //besoin d'installer HADOOP pour cette partie
+            String menuHebdomadairePath = "C:/epsi/data/menu_hebdomadaire1";
+            menuHebdomadaire.write()
+                    .format("csv")
+                    .option("header", "true")
+                    .option("delimiter", ",")
+                    .mode("overwrite")
+                    .save(menuHebdomadairePath);
+            
+            // Création d'une table dans le DWH pour stocker le menu hebdomadaire
+            menuHebdomadaire.createOrReplaceTempView("table_menu_hebdomadaire");
+            
+            // Création d'une table pour lier le menu hebdomadaire à l'utilisateur final
+            String sqlCreateLinkTable = "CREATE TABLE IF NOT EXISTS table_lien_utilisateur_menu (" +
+                    "utilisateur_id INT, " +
+                    "menu_id INT, " +
+                    "jour INT)";
+            sparkSession.sql(sqlCreateLinkTable);
+            
+             // On ajoute les informations de liaison dans la table du DWH
+            String sqlInsertLinkInfo = "INSERT INTO table_lien_utilisateur_menu VALUES (utilisateur_id, menu_id, jour)";
+            sparkSession.sql(sqlInsertLinkInfo);
+
+            // Affichage du menu hebdomadaire (c'est le seul résultat observable par l'utilisateur final)
+            System.out.println("Voici le menu de la semaine :");
+            menuHebdomadaire.show();
+
+        return menuHebdomadaire;
+    }
 }
